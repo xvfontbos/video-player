@@ -1,0 +1,16 @@
+{
+  "name": "Reproductor Vídeo",
+  "short_name": "Vídeo",
+  "description": "Reproductor de vídeo amb subtítols i àudio dual",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
+  <!-- Fons fosc -->
+  <rect width="192" height="192" rx="32" fill="#111111"/>
+  <!-- Marc de pel·lícula -->
+  <rect x="24" y="48" width="144" height="96" rx="8" fill="none" stroke="#c8a97e" stroke-width="6"/>
+  <!-- Perforacions esquerra -->
+  <rect x="30" y="60" width="16" height="20" rx="3" fill="#c8a97e"/>
+  <rect x="30" y="86" width="16" height="20" rx="3" fill="#c8a97e"/>
+  <rect x="30" y="112" width="16" height="20" rx="3" fill="#c8a97e"/>
+  <!-- Perforacions dreta -->
+  <rect x="146" y="60" width="16" height="20" rx="3" fill="#c8a97e"/>
+  <rect x="146" y="86" width="16" height="20" rx="3" fill="#c8a97e"/>
+  <rect x="146" y="112" width="16" height="20" rx="3" fill="#c8a97e"/>
+  <!-- Triangle play -->
+  <polygon points="78,72 78,120 130,96" fill="#c8a97e"/>
+</svg>
