@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reproductor de Vídeo</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#111111">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -61,6 +58,82 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* ── ÀREA PRINCIPAL ── */
+  #main {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    min-height: 0;
+  }
+
+  /* ── HISTORIAL ── */
+  #sidebar {
+    width: 220px;
+    min-width: 220px;
+    background: #111;
+    border-right: 1px solid #333;
+    overflow-y: auto;
+    display: none;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  #sidebar.open { display: flex; }
+  #sidebar h3 {
+    padding: 10px 13px;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #777;
+    font-family: sans-serif;
+    border-bottom: 1px solid #222;
+    flex-shrink: 0;
+  }
+  #history-list {
+    list-style: none;
+    padding: 6px 0;
+    flex: 1;
+    overflow-y: auto;
+  }
+  #history-list li {
+    padding: 8px 13px;
+    border-bottom: 1px solid #1a1a1a;
+    cursor: default;
+  }
+  #history-list li .h-name {
+    font-size: 0.8rem;
+    font-family: sans-serif;
+    color: #ccc;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  #history-list li .h-time {
+    font-size: 0.72rem;
+    font-family: sans-serif;
+    color: #666;
+  }
+  #history-list li .h-del {
+    float: right;
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 0.75rem;
+    padding: 0;
+    line-height: 1;
+  }
+  #history-list li .h-del:hover { color: #c88; }
+  #history-list li:hover .h-name { color: #eee; }
+
+  #sidebar-empty {
+    padding: 20px 13px;
+    font-size: 0.78rem;
+    font-family: sans-serif;
+    color: #555;
+    text-align: center;
   }
 
   /* ── ÀREA DE VÍDEO ── */
@@ -196,6 +269,41 @@
   #audio-select:hover { border-color: #888; color: #eee; }
   option { background: #222; color: #eee; }
 
+  /* ── DIÀLEG DE REPRESA ── */
+  #resume-dialog {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(17,17,17,0.95);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 24px 32px;
+    text-align: center;
+    z-index: 10;
+  }
+  #resume-msg {
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+  #resume-btns { display: flex; gap: 10px; justify-content: center; }
+  #resume-btns button {
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 6px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: sans-serif;
+    font-size: 0.85rem;
+  }
+  #resume-btns button:first-child { border-color: #c8a97e; color: #c8a97e; }
+  #resume-btns button:hover { color: #eee; border-color: #888; }
+  #resume-btns button:first-child:hover { color: #e8c97e; border-color: #e8c97e; }
+
   /* ── SUBTÍTOLS ── */
   #subtitle-display {
     position: absolute;
@@ -237,6 +345,7 @@
 <body>
 
 <div id="toolbar">
+  <button onclick="toggleSidebar()">☰ Historial</button>
   <label for="video-input">Obre vídeo</label>
   <input type="file" id="video-input" accept="video/mp4,video/webm,video/x-matroska,.mkv,.mp4,.webm">
 
@@ -252,7 +361,14 @@
   <button id="fs-btn" onclick="toggleFullscreen()">⛶ Pantalla completa</button>
 </div>
 
-<div id="video-area">
+<div id="main">
+  <div id="sidebar">
+    <h3>Historial</h3>
+    <ul id="history-list"></ul>
+    <div id="sidebar-empty">Cap vídeo vist encara.</div>
+  </div>
+
+  <div id="video-area">
   <video id="player" preload="metadata"></video>
   <div id="subtitle-display"></div>
   <div id="welcome-msg">
@@ -260,7 +376,15 @@
     <p>Formats: MP4, WebM, MKV</p>
     <p style="margin-top:4px">Subtítols: .srt · Àudio dual: fitxer separat o pistes del vídeo</p>
   </div>
-</div>
+  <div id="resume-dialog">
+    <p id="resume-msg"></p>
+    <div id="resume-btns">
+      <button onclick="resumeVideo()">Continua</button>
+      <button onclick="startOver()">Des del principi</button>
+    </div>
+  </div>
+  </div><!-- fi video-area -->
+</div><!-- fi main -->
 
 <div id="controls">
   <div id="progress-wrap" onclick="seek(event)">
@@ -297,10 +421,12 @@ const audioSel   = document.getElementById('audio-select');
 
 let subtitles    = [];
 let subsActive   = false;
-let altAudio     = null; // AudioContext per àudio alternatiu
-let altAudioEl   = null; // element <audio> per pista 2 separada
+let altAudio     = null;
+let altAudioEl   = null;
 let usingAltAudio= false;
 let currentSubs  = '';
+let currentFileKey = '';
+let saveTimer    = null;
 
 // ── CÀRREGA DE VÍDEO ──────────────────────────────────
 document.getElementById('video-input').addEventListener('change', e => {
@@ -315,8 +441,28 @@ document.getElementById('video-input').addEventListener('change', e => {
   document.getElementById('welcome-msg').style.display = 'none';
   playBtn.disabled = false;
 
-  // Detectar pistes d'àudio natives (MKV amb múltiples pistes)
-  player.addEventListener('loadedmetadata', checkNativeAudioTracks, { once: true });
+  // Clau per al marcador
+  currentFileKey = 'video_pos_' + file.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+
+  // Comprovar si hi ha posició guardada
+  player.addEventListener('loadedmetadata', () => {
+    checkNativeAudioTracks();
+    try {
+      const saved = localStorage.getItem(currentFileKey);
+      if (saved) {
+        const { time } = JSON.parse(saved);
+        if (time && time > 10) {
+          document.getElementById('resume-msg').textContent =
+            'Vas deixar aquest vídeo a ' + formatTime(time) + '. Vols continuar?';
+          document.getElementById('resume-dialog').style.display = 'block';
+          player._savedTime = time;
+          return;
+        }
+      }
+    } catch(e) {}
+    player.play();
+    playBtn.textContent = '⏸ Pausa';
+  }, { once: true });
 });
 
 function checkNativeAudioTracks() {
@@ -441,6 +587,85 @@ function toggleSubs() {
   }
 }
 
+// ── HISTORIAL ─────────────────────────────────────────
+const HISTORY_KEY = 'video_history';
+const MAX_HISTORY = 10;
+
+function loadHistory() {
+  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function saveToHistory(name, time, duration) {
+  try {
+    let history = loadHistory();
+    // Treure entrada existent amb el mateix nom
+    history = history.filter(h => h.name !== name);
+    // Afegir al principi
+    history.unshift({ name, time, duration, date: Date.now() });
+    // Limitar a 10
+    if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+  } catch(e) {}
+}
+
+function deleteFromHistory(name) {
+  try {
+    let history = loadHistory().filter(h => h.name !== name);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    // Esborrar també el marcador de posició
+    const key = 'video_pos_' + name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    localStorage.removeItem(key);
+    renderHistory();
+  } catch(e) {}
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('sidebar-empty');
+  const history = loadHistory();
+  list.innerHTML = '';
+  if (!history.length) {
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  history.forEach(h => {
+    const li = document.createElement('li');
+    const pct = h.duration ? Math.round((h.time / h.duration) * 100) : 0;
+    li.innerHTML = `
+      <button class="h-del" onclick="deleteFromHistory('${h.name.replace(/'/g, "\\'")}')">✕</button>
+      <div class="h-name" title="${h.name}">${h.name}</div>
+      <div class="h-time">${formatTime(h.time)}${h.duration ? ' · ' + pct + '%' : ''}</div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Carregar historial en iniciar
+renderHistory();
+
+// ── REPRESA ───────────────────────────────────────────
+function resumeVideo() {
+  document.getElementById('resume-dialog').style.display = 'none';
+  player.currentTime = player._savedTime || 0;
+  player.play();
+  playBtn.textContent = '⏸ Pausa';
+}
+
+function startOver() {
+  document.getElementById('resume-dialog').style.display = 'none';
+  player.currentTime = 0;
+  try { localStorage.removeItem(currentFileKey); } catch(e) {}
+  player.play();
+  playBtn.textContent = '⏸ Pausa';
+}
+
 // ── REPRODUCCIÓ ───────────────────────────────────────
 function togglePlay() {
   if (player.paused) {
@@ -471,6 +696,8 @@ function setVolume(v) {
 player.addEventListener('ended', () => {
   playBtn.textContent = '▶ Play';
   if (usingAltAudio && altAudioEl) altAudioEl.pause();
+  // Esborrar marcador quan acaba
+  try { if (currentFileKey) localStorage.removeItem(currentFileKey); } catch(e) {}
 });
 
 // ── PROGRÉS I SUBTÍTOLS ───────────────────────────────
@@ -483,6 +710,17 @@ player.addEventListener('timeupdate', () => {
 
   // Temps
   timeDisp.textContent = formatTime(player.currentTime) + ' / ' + formatTime(player.duration);
+
+  // Guardar posició cada 5 segons
+  if (currentFileKey && player.currentTime > 10) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(currentFileKey, JSON.stringify({ time: player.currentTime }));
+        saveToHistory(document.getElementById('file-title').textContent, player.currentTime, player.duration);
+      } catch(e) {}
+    }, 5000);
+  }
 
   // Subtítols
   if (subsActive && subtitles.length) {
@@ -540,10 +778,6 @@ document.addEventListener('fullscreenchange', () => {
 function toggleTheme() {
   const l = document.body.classList.toggle('light');
   document.getElementById('theme-btn').textContent = l ? '☀ Fosc' : '☀ Clar';
- }
-// ── SERVICE WORKER ────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
 }
 </script>
 </body>
