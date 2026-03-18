@@ -2,7 +2,7 @@
   "name": "Reproductor Vídeo",
   "short_name": "Vídeo",
   "description": "Reproductor de vídeo amb subtítols i àudio dual",
-  "start_url": "/index.html",
+  "start_url": "./index.html",
   "scope": "/video-player/",
   "display": "standalone",
   "background_color": "#1a1a1a",
