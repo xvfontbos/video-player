@@ -463,8 +463,7 @@ document.getElementById('video-input').addEventListener('change', e => {
         }
       }
     } catch(e) {}
-    player.play();
-    playBtn.textContent = '⏸ Pausa';
+    // No autoplay: esperem que l'usuari premi Play
   }, { once: true });
 });
 
