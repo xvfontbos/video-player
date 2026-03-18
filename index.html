@@ -540,6 +540,7 @@ document.addEventListener('fullscreenchange', () => {
 function toggleTheme() {
   const l = document.body.classList.toggle('light');
   document.getElementById('theme-btn').textContent = l ? '☀ Fosc' : '☀ Clar';
+ }
 // ── SERVICE WORKER ────────────────────────────────────
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js').catch(() => {});
