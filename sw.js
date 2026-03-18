@@ -1,5 +1,9 @@
 const CACHE = 'reproductor-video-v1';
-const FILES = ['/index.html', '/manifest.json', '/icon.svg'];
+const FILES = [
+  '/video-player/index.html',
+  '/video-player/manifest.json',
+  '/video-player/icon.svg'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
