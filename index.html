@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-<link rel="icon" type="image/png" href="image.png">
-<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lector EPUB Personal</title>
+<title>Reproductor de Vídeo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#111111">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -19,17 +20,18 @@
     overflow: hidden;
   }
 
+  /* ── TOOLBAR ── */
   #toolbar {
     background: #111;
-    padding: 10px 16px;
+    padding: 8px 14px;
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     flex-wrap: wrap;
     border-bottom: 1px solid #333;
+    flex-shrink: 0;
   }
 
-  /* Alçada uniforme per a tots els botons de la barra */
   #toolbar button,
   #toolbar label {
     height: 30px;
@@ -37,7 +39,7 @@
     display: inline-flex;
     align-items: center;
     padding: 0 12px;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-family: sans-serif;
     border-radius: 4px;
     cursor: pointer;
@@ -48,62 +50,20 @@
   }
   #toolbar button:hover,
   #toolbar label:hover { color: #eee; border-color: #888; }
+  #toolbar button:disabled { opacity: 0.3; cursor: default; }
+  input[type="file"] { display: none; }
 
-  #toolbar label {
-    background: transparent;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-family: sans-serif;
-    border: 1px solid #444;
-  }
-  #toolbar label:hover { color: #eee; border-color: #888; }
-  #file-input { display: none; }
-
-  #book-title {
+  #file-title {
     flex: 1;
-    font-size: 0.9rem;
-    color: #aaa;
+    font-size: 0.85rem;
+    color: #777;
     font-family: sans-serif;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  #font-controls {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-family: sans-serif;
-    font-size: 0.85rem;
-    color: #aaa;
-  }
-  #font-controls button {
-    background: transparent;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-    font-family: sans-serif;
-  }
-  #font-controls button:hover { color: #eee; border-color: #888; }
-
-  #theme-btn {
-    background: transparent;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: sans-serif;
-    font-size: 0.85rem;
-  }
-  #theme-btn:hover { color: #eee; border-color: #888; }
-
+  /* ── ÀREA PRINCIPAL ── */
   #main {
     display: flex;
     flex: 1;
@@ -111,6 +71,7 @@
     min-height: 0;
   }
 
+  /* ── HISTORIAL ── */
   #sidebar {
     width: 220px;
     min-width: 220px;
@@ -119,1026 +80,620 @@
     overflow-y: auto;
     display: none;
     flex-direction: column;
+    flex-shrink: 0;
   }
-
   #sidebar.open { display: flex; }
-
   #sidebar h3 {
-    padding: 12px 14px;
-    font-size: 0.8rem;
+    padding: 10px 13px;
+    font-size: 0.78rem;
     text-transform: uppercase;
     letter-spacing: 0.1em;
     color: #777;
     font-family: sans-serif;
     border-bottom: 1px solid #222;
+    flex-shrink: 0;
   }
-
-  #toc-list {
+  #history-list {
     list-style: none;
     padding: 6px 0;
-  }
-
-  #toc-list li a {
-    display: block;
-    padding: 7px 14px;
-    color: #ccc;
-    text-decoration: none;
-    font-size: 0.82rem;
-    font-family: sans-serif;
-    line-height: 1.4;
-    border-left: 3px solid transparent;
-  }
-  #toc-list li a:hover { background: #1e1e1e; color: #fff; }
-  #toc-list li a.active { border-left-color: #c8a97e; color: #c8a97e; }
-
-  #reader-area {
     flex: 1;
+    overflow-y: auto;
+  }
+  #history-list li {
+    padding: 8px 13px;
+    border-bottom: 1px solid #1a1a1a;
+    cursor: default;
+  }
+  #history-list li .h-name {
+    font-size: 0.8rem;
+    font-family: sans-serif;
+    color: #ccc;
+    white-space: nowrap;
     overflow: hidden;
-    position: relative;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
   }
-
-  #page-container {
-    height: 100%;
-    column-fill: auto;
-    column-gap: 0px;
-    transition: transform 0.2s ease;
-    will-change: transform;
+  #history-list li .h-time {
+    font-size: 0.72rem;
+    font-family: sans-serif;
+    color: #666;
   }
-
-  #content {
-    font-size: 1.1rem;
-    line-height: 1.8;
-    padding: 36px 52px;
-  }
-
-  #content h1, #content h2, #content h3 {
-    margin: 1.5em 0 0.6em;
-    line-height: 1.3;
-    color: #f0e8dc;
-  }
-  #content p { margin-bottom: 0.9em; text-align: justify; }
-  #content img { max-width: 100%; height: auto; margin: 1em auto; display: block; }
-  #content a { color: #c8a97e; }
-
-  /* Coberta: imatge a pantalla completa */
-  #page-container.is-cover {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    column-width: unset !important;
-  }
-  #page-container.is-cover #content {
+  #history-list li .h-del {
+    float: right;
+    background: transparent;
+    border: none;
+    color: #555;
+    cursor: pointer;
+    font-size: 0.75rem;
     padding: 0;
-    width: 100%;
-    height: 100%;
+    line-height: 1;
+  }
+  #history-list li .h-del:hover { color: #c88; }
+  #history-list li:hover .h-name { color: #eee; }
+
+  #sidebar-empty {
+    padding: 20px 13px;
+    font-size: 0.78rem;
+    font-family: sans-serif;
+    color: #555;
+    text-align: center;
+  }
+
+  /* ── ÀREA DE VÍDEO ── */
+  #video-area {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+    min-height: 0;
   }
-  #page-container.is-cover #content img {
+
+  /* Amagar cursor */
+  #video-area.hide-cursor {
+    cursor: none;
+  }
+
+  #player {
     max-width: 100%;
     max-height: 100%;
-    width: auto;
-    height: auto;
+    width: 100%;
+    height: 100%;
     object-fit: contain;
-    margin: 0;
+    outline: none;
   }
 
-  #nav-bar {
+  #welcome-msg {
+    position: absolute;
+    text-align: center;
+    color: #444;
+    font-family: sans-serif;
+    pointer-events: none;
+  }
+  #welcome-msg p:first-child { font-size: 1rem; margin-bottom: 6px; color: #555; }
+  #welcome-msg p { font-size: 0.85rem; }
+
+  /* ── CONTROLS ── */
+  #controls {
     background: #111;
     border-top: 1px solid #333;
-    padding: 10px 20px;
+    padding: 8px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Amagar controls */
+  #video-area.hide-controls + #controls {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #progress-wrap {
+    position: relative;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    cursor: pointer;
+  }
+  #progress-bar {
+    height: 100%;
+    background: #c8a97e;
+    border-radius: 2px;
+    width: 0%;
+    pointer-events: none;
+  }
+  #progress-wrap:hover { height: 6px; margin-top: -1px; }
+
+  #controls-row {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 10px;
   }
 
-  #nav-bar button {
-    background: #333;
-    border: none;
-    color: #eee;
-    padding: 7px 18px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: sans-serif;
-    font-size: 0.85rem;
-  }
-  #nav-bar button:hover { background: #555; }
-  #nav-bar button:disabled { opacity: 0.3; cursor: default; }
-
-  #chapter-info {
-    font-family: sans-serif;
-    font-size: 0.8rem;
-    color: #777;
-    text-align: center;
-    line-height: 1.5;
-  }
-
-  #toc-toggle {
+  #controls-row button {
     background: transparent;
     border: 1px solid #444;
     color: #aaa;
-    padding: 5px 12px;
+    padding: 0 12px;
+    height: 28px;
     border-radius: 4px;
     cursor: pointer;
     font-family: sans-serif;
-    font-size: 0.85rem;
-  }
-  #toc-toggle:hover { color: #eee; border-color: #888; }
-
-  #welcome {
-    text-align: center;
-    margin-top: 80px;
-    color: #555;
-    font-family: sans-serif;
-  }
-  #welcome h2 { font-size: 1.2rem; margin-bottom: 10px; color: #666; }
-  #welcome p { font-size: 0.9rem; }
-
-  #search-toggle-btn {
-    background: transparent;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: sans-serif;
-    font-size: 0.85rem;
-  }
-  #search-toggle-btn:hover { color: #eee; border-color: #888; }
-  body.light #search-toggle-btn { background: transparent; border-color: #bbb; color: #666; }
-  body.light #search-toggle-btn:hover { color: #111; border-color: #666; }
-
-  #fs-btn {
-    background: transparent;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: sans-serif;
-    font-size: 0.85rem;
-  }
-  #fs-btn:hover { color: #eee; border-color: #888; }
-  body.light #fs-btn { background: transparent; border-color: #bbb; color: #666; }
-  body.light #fs-btn:hover { color: #111; border-color: #666; }
-
-  #tts-btn {
-    background: transparent;
-    border: 1px solid #444;
-    color: #aaa;
-    padding: 5px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-family: sans-serif;
-    font-size: 0.85rem;
-    min-width: 80px;
-  }
-  #tts-btn:hover { color: #eee; border-color: #888; }
-  #tts-btn.active { border-color: #c8a97e; color: #c8a97e; }
-  body.light #tts-btn { background: transparent; border-color: #bbb; color: #666; }
-  body.light #tts-btn:hover { color: #111; border-color: #666; }
-
-  /* Ressaltat de paraula llegida */
-  .tts-word {
-    background: rgba(200, 169, 126, 0.45);
-    border-radius: 2px;
-  }
-
-  /* Cercador */
-  #search-bar {
-    display: none;
-    background: #111;
-    border-bottom: 1px solid #333;
-    padding: 8px 16px;
-    gap: 8px;
+    font-size: 0.82rem;
+    display: inline-flex;
     align-items: center;
-    flex-wrap: wrap;
+    white-space: nowrap;
   }
-  #search-bar.open { display: flex; }
+  #controls-row button:hover { color: #eee; border-color: #888; }
+  #controls-row button:disabled { opacity: 0.3; cursor: default; }
+  #play-btn { min-width: 90px; justify-content: center; }  
 
-  #search-input {
-    flex: 1;
-    min-width: 180px;
-    background: #222;
-    border: 1px solid #444;
-    color: #eee;
-    padding: 6px 10px;
-    border-radius: 4px;
-    font-size: 0.9rem;
+  #time-display {
     font-family: sans-serif;
+    font-size: 0.78rem;
+    color: #777;
+    white-space: nowrap;
+  }
+
+  #volume-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  #volume-wrap span {
+    font-family: sans-serif;
+    font-size: 0.78rem;
+    color: #777;
+  }
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 80px;
+    height: 4px;
+    background: #333;
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #c8a97e;
+    cursor: pointer;
+  }
+
+  /* ── AUDIO SELECTOR ── */
+  #audio-select {
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 0 8px;
+    height: 28px;
+    border-radius: 4px;
+    font-family: sans-serif;
+    font-size: 0.78rem;
+    cursor: pointer;
     outline: none;
   }
-  #search-input:focus { border-color: #c8a97e; }
+  #audio-select:hover { border-color: #888; color: #eee; }
+  option { background: #222; color: #eee; }
 
-  #search-btn, #search-close {
-    background: #444;
-    border: none;
-    color: #eee;
-    padding: 6px 14px;
+  /* ── DIÀLEG DE REPRESA ── */
+  #resume-dialog {
+    display: none;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(17,17,17,0.95);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 24px 32px;
+    text-align: center;
+    z-index: 10;
+  }
+  #resume-msg {
+    font-family: sans-serif;
+    font-size: 0.9rem;
+    color: #ccc;
+    margin-bottom: 16px;
+  }
+  #resume-btns { display: flex; gap: 10px; justify-content: center; }
+  #resume-btns button {
+    background: transparent;
+    border: 1px solid #444;
+    color: #aaa;
+    padding: 6px 18px;
     border-radius: 4px;
     cursor: pointer;
     font-family: sans-serif;
     font-size: 0.85rem;
   }
-  #search-btn:hover, #search-close:hover { background: #666; }
+  #resume-btns button:first-child { border-color: #c8a97e; color: #c8a97e; }
+  #resume-btns button:hover { color: #eee; border-color: #888; }
+  #resume-btns button:first-child:hover { color: #e8c97e; border-color: #e8c97e; }
 
-  #search-info {
+  /* ── SUBTÍTOLS SEMITRANSPARENTS ── */
+  #subtitle-display {
+    position: absolute;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.25);
+    color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    font-size: 1.1rem;
     font-family: sans-serif;
-    font-size: 0.8rem;
-    color: #888;
-    min-width: 100px;
-  }
-
-  #search-nav { display: flex; gap: 4px; }
-  #search-nav button {
-    background: #333;
-    border: none;
-    color: #eee;
-    padding: 4px 10px;
+    padding: 4px 14px;
     border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.85rem;
-  }
-  #search-nav button:hover { background: #555; }
-  #search-nav button:disabled { opacity: 0.3; cursor: default; }
-
-  mark.search-hit {
-    background: #c8a97e;
-    color: #111;
-    border-radius: 2px;
-    padding: 0 1px;
-  }
-  mark.search-hit.current {
-    background: #e8c97e;
-    outline: 2px solid #fff;
+    text-align: center;
+    max-width: 90%;
+    line-height: 1.5;
+    min-height: calc(1.1rem * 1.5 * 2 + 8px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+    transition: bottom 0.3s ease;
   }
 
-  /* Tema clar cercador */
-  body.light #search-bar { background: #e8e0d0; border-color: #ccc; }
-  body.light #search-input { background: #fff; border-color: #bbb; color: #222; }
-  body.light #search-btn, body.light #search-close { background: #ccc; color: #222; }
-  body.light #search-nav button { background: #ccc; color: #222; }
-  body.light #search-info { color: #666; }
+  #video-area.hide-controls #subtitle-display {
+    bottom: 24px;
+  }
 
-  /* Tema clar */
-  body.light { background: #f5f0e8; color: #222; }
+  /* ── TEMA CLAR ── */
+  body.light { background: #f0ece4; color: #222; }
   body.light #toolbar,
-  body.light #nav-bar,
-  body.light #sidebar { background: #e8e0d0; border-color: #ccc; }
-  body.light #sidebar h3 { color: #888; border-color: #ddd; }
-  body.light #toc-list li a { color: #444; }
-  body.light #toc-list li a:hover { background: #ddd8cc; color: #111; }
-  body.light #content h1,
-  body.light #content h2,
-  body.light #content h3 { color: #111; }
+  body.light #controls { background: #e8e0d0; border-color: #ccc; }
+  body.light #toolbar button,
   body.light #toolbar label,
-  body.light #font-controls button,
-  body.light #theme-btn,
-  body.light #toc-toggle,
-  body.light #nav-bar button { background: transparent; border-color: #bbb; color: #666; }
+  body.light #controls-row button { border-color: #bbb; color: #666; }
+  body.light #toolbar button:hover,
   body.light #toolbar label:hover,
-  body.light #font-controls button:hover,
-  body.light #theme-btn:hover,
-  body.light #toc-toggle:hover,
-  body.light #nav-bar button:hover { color: #111; border-color: #666; }
-  body.light #book-title,
-  body.light #chapter-info,
-  body.light #font-controls { color: #666; }
+  body.light #controls-row button:hover { color: #111; border-color: #666; }
+  body.light #file-title { color: #999; }
+  body.light #time-display,
+  body.light #volume-wrap span { color: #888; }
+  body.light #progress-wrap { background: #ccc; }
+  body.light input[type="range"] { background: #ccc; }
+  body.light #audio-select { border-color: #bbb; color: #666; }
+  body.light #video-area { background: #111; }
 </style>
 </head>
 <body>
 
 <div id="toolbar">
-  <button id="toc-toggle" onclick="toggleSidebar()">☰ Índex</button>
-  <label for="file-input">Obre EPUB</label>
-  <input type="file" id="file-input" accept=".epub">
-  <span id="book-title">Cap llibre carregat</span>
-  <div id="font-controls">
-    <button onclick="changeFont(-1)">A−</button>
-    <button onclick="changeFont(1)">A+</button>
-  </div>
-  <button id="theme-btn" onclick="toggleTheme()">☀</button>
-  <button id="search-toggle-btn" onclick="toggleSearch()">Cerca</button>
-  <button id="fs-btn" onclick="toggleFullscreen()">⛶ Pantalla completa</button>
-  <button id="tts-btn" onclick="toggleTTS()">▶ Llegir</button>
-</div>
+  <button onclick="toggleSidebar()">☰ Historial</button>
+  <label for="video-input">Obre vídeo</label>
+  <input type="file" id="video-input" accept="video/mp4,video/webm,video/x-matroska,.mkv,.mp4,.webm">
 
-<div id="search-bar">
-  <input type="text" id="search-input" placeholder="Cerca una paraula o frase…">
-  <button id="search-btn" onclick="doSearch()">Cerca</button>
-  <span id="search-info"></span>
-  <div id="search-nav">
-    <button id="s-prev" onclick="searchNav(-1)" disabled>↑</button>
-    <button id="s-next" onclick="searchNav(1)" disabled>↓</button>
-  </div>
-  <button id="search-close" onclick="closeSearch()">✕</button>
+  <label for="srt-input">Subtítols .srt</label>
+  <input type="file" id="srt-input" accept=".srt,.vtt">
+
+  <label for="audio2-input">Àudio 2</label>
+  <input type="file" id="audio2-input" accept="audio/*">
+
+  <span id="file-title">Cap fitxer carregat</span>
+
+  <button id="theme-btn" onclick="toggleTheme()">☀</button>
+  <button id="fs-btn" onclick="toggleFullscreen()">⛶ Pantalla completa</button>
 </div>
 
 <div id="main">
   <div id="sidebar">
-    <h3>Contingut</h3>
-    <ul id="toc-list"></ul>
+    <h3>Historial</h3>
+    <ul id="history-list"></ul>
+    <div id="sidebar-empty">Cap vídeo vist encara.</div>
   </div>
-  <div id="reader-area">
-    <div id="page-container">
-      <div id="content">
-        <div id="welcome">
-          <h2>Lector EPUB</h2>
-          <p>Fes clic a «Obre EPUB» per carregar un llibre.</p>
-        </div>
-      </div>
+
+  <div id="video-area">
+  <video id="player" preload="metadata"></video>
+  <div id="subtitle-display"></div>
+  <div id="welcome-msg">
+    <p>Reproductor de vídeo</p>
+    <p>Formats: MP4, WebM, MKV</p>
+    <p style="margin-top:4px">Subtítols: .srt · Àudio dual: fitxer separat o pistes del vídeo</p>
+  </div>
+  <div id="resume-dialog">
+    <p id="resume-msg"></p>
+    <div id="resume-btns">
+      <button onclick="resumeVideo()">Continua</button>
+      <button onclick="startOver()">Des del principi</button>
+    </div>
+  </div>
+  </div>
+</div>
+
+<div id="controls">
+  <div id="progress-wrap" onclick="seek(event)">
+    <div id="progress-bar"></div>
+  </div>
+  <div id="controls-row">
+    <button onclick="skip(-10)">« 10s</button>
+    <button id="play-btn" onclick="togglePlay()" disabled>▶ Play</button>
+    <button onclick="skip(10)">10s »</button>
+    <span id="time-display">0:00 / 0:00</span>
+
+    <select id="audio-select" onchange="switchAudio()" style="display:none">
+      <option value="main">Àudio 1</option>
+      <option value="alt">Àudio 2</option>
+    </select>
+
+    <button id="sub-btn" onclick="toggleSubs()" disabled>Subtítols: OFF</button>
+
+    <div id="volume-wrap">
+      <span>Vol</span>
+      <input type="range" id="volume" min="0" max="1" step="0.05" value="1" oninput="setVolume(this.value)">
     </div>
   </div>
 </div>
 
-<div id="nav-bar">
-  <button id="btn-prev" onclick="prevPage()" disabled>← Anterior</button>
-  <span id="chapter-info">—</span>
-  <button id="btn-next" onclick="nextPage()" disabled>Següent →</button>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
-let zip = null;
-let spine = [];
-let currentIndex = 0;
-let currentPage = 0;
-let totalPages = 0;
-let fontSize = 1.1;
-let opfBase = '';
-let blobUrls = {};
-let resizeTimer = null;
-let bookKey = '';
+const player     = document.getElementById('player');
+const playBtn    = document.getElementById('play-btn');
+const progressBar= document.getElementById('progress-bar');
+const timeDisp   = document.getElementById('time-display');
+const subDisplay = document.getElementById('subtitle-display');
+const subBtn     = document.getElementById('sub-btn');
+const audioSel   = document.getElementById('audio-select');
+const videoArea  = document.getElementById('video-area');
 
-document.getElementById('file-input').addEventListener('change', async e => {
+let subtitles    = [];
+let subsActive   = false;
+let altAudioEl   = null;
+let usingAltAudio= false;
+let currentSubs  = '';
+let currentFileKey = '';
+let saveTimer    = null;
+
+let mouseMoveTimeout;
+const hideDelay = 2000;
+
+document.getElementById('video-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
-  try {
-    zip = await JSZip.loadAsync(file);
-    await parseEpub(file.name);
-  } catch(err) {
-    document.getElementById('content').innerHTML = '<p style="color:red">Error llegint el fitxer EPUB.</p>';
-  }
-});
 
-async function parseEpub(filename) {
-  // Llegir container.xml
-  const container = await zip.file('META-INF/container.xml').async('string');
-  const parser = new DOMParser();
-  const containerDoc = parser.parseFromString(container, 'application/xml');
-  const opfPath = containerDoc.querySelector('rootfile').getAttribute('full-path');
-  opfBase = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : '';
+  const url = URL.createObjectURL(file);
+  player.src = url;
+  player.load();
 
-  // Llegir OPF
-  const opfText = await zip.file(opfPath).async('string');
-  const opfDoc = parser.parseFromString(opfText, 'application/xml');
+  document.getElementById('file-title').textContent = file.name;
+  document.getElementById('welcome-msg').style.display = 'none';
+  playBtn.disabled = false;
+  currentFileKey = 'video_pos_' + file.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
 
-  // Títol
-  const titleEl = opfDoc.querySelector('title');
-  const bookTitle = titleEl ? titleEl.textContent : filename.replace('.epub','');
-  document.getElementById('book-title').textContent = bookTitle;
-  document.title = bookTitle;
-  bookKey = 'epub_pos_' + bookTitle.replace(/\s+/g, '_').substring(0, 40);
-
-  // Manifest
-  const manifest = {};
-  opfDoc.querySelectorAll('manifest item').forEach(item => {
-    manifest[item.getAttribute('id')] = {
-      href: item.getAttribute('href'),
-      type: item.getAttribute('media-type')
-    };
-  });
-
-  // Spine
-  spine = [];
-  opfDoc.querySelectorAll('spine itemref').forEach(ref => {
-    const id = ref.getAttribute('idref');
-    if (manifest[id]) spine.push(manifest[id].href);
-  });
-
-  // TOC — intentar ncx o nav
-  let tocItems = [];
-  const ncxId = opfDoc.querySelector('spine')?.getAttribute('toc');
-  if (ncxId && manifest[ncxId]) {
-    tocItems = await parseNcx(manifest[ncxId].href);
-  } else {
-    // Buscar nav
-    const navItem = Object.values(manifest).find(m => m.type === 'application/xhtml+xml' && m.href.includes('nav'));
-    if (navItem) tocItems = await parseNav(navItem.href);
-  }
-
-  // Construir índex
-  const tocList = document.getElementById('toc-list');
-  tocList.innerHTML = '';
-  if (tocItems.length > 0) {
-    tocItems.forEach((item, i) => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = '#';
-      a.textContent = item.label;
-      a.addEventListener('click', e => {
-        e.preventDefault();
-        const idx = spine.findIndex(s => s.endsWith(item.href.split('#')[0]) || item.href.includes(s));
-        if (idx !== -1) goTo(idx);
-        else goTo(0);
-      });
-      li.appendChild(a);
-      tocList.appendChild(li);
-    });
-  } else {
-    spine.forEach((href, i) => {
-      const li = document.createElement('li');
-      const a = document.createElement('a');
-      a.href = '#';
-      a.textContent = 'Capítol ' + (i + 1);
-      a.addEventListener('click', e => { e.preventDefault(); goTo(i); });
-      li.appendChild(a);
-      tocList.appendChild(li);
-    });
-  }
-
-  document.getElementById('sidebar').classList.add('open');
-
-  // Recuperar posició guardada si existeix
-  try {
-    const saved = localStorage.getItem(bookKey);
-    if (saved) {
-      const { chapter, page } = JSON.parse(saved);
-      goTo(chapter || 0, page || 0);
-    } else {
-      goTo(0);
-    }
-  } catch(e) {
-    goTo(0);
-  }
-}
-
-async function parseNcx(href) {
-  const text = await zip.file(opfBase + href).async('string');
-  const doc = new DOMParser().parseFromString(text, 'application/xml');
-  const items = [];
-  doc.querySelectorAll('navPoint').forEach(np => {
-    const label = np.querySelector('navLabel text')?.textContent?.trim() || '';
-    const src = np.querySelector('content')?.getAttribute('src') || '';
-    items.push({ label, href: src.split('#')[0] });
-  });
-  return items;
-}
-
-async function parseNav(href) {
-  const text = await zip.file(opfBase + href).async('string');
-  const doc = new DOMParser().parseFromString(text, 'application/xhtml+xml');
-  const items = [];
-  doc.querySelectorAll('nav[epub\\:type="toc"] a, nav a').forEach(a => {
-    items.push({ label: a.textContent.trim(), href: a.getAttribute('href') || '' });
-  });
-  return items;
-}
-
-async function goTo(index, pageTarget) {
-  if (index < 0 || index >= spine.length) return;
-  currentIndex = index;
-  searchIndex = [];
-
-  const href = opfBase + spine[index];
-  let text = '';
-  try {
-    text = await zip.file(href).async('string');
-  } catch(e) {
-    document.getElementById('content').innerHTML = '<p style="color:#a88">No s\'ha pogut carregar aquest capítol.</p>';
-    return;
-  }
-
-  // Processar imatges inline
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(text, 'application/xhtml+xml');
-
-  // Carregar imatges com blob
-  const imgs = doc.querySelectorAll('img, image');
-  for (const img of imgs) {
-    const src = img.getAttribute('src') || img.getAttribute('xlink:href') || '';
-    if (src) {
-      const imgPath = resolvePath(href, src);
-      const imgFile = zip.file(imgPath);
-      if (imgFile) {
-        if (!blobUrls[imgPath]) {
-          const blob = await imgFile.async('blob');
-          blobUrls[imgPath] = URL.createObjectURL(blob);
-        }
-        img.setAttribute('src', blobUrls[imgPath]);
-      }
-    }
-  }
-
-  // Extreure body
-  const body = doc.querySelector('body');
-  document.getElementById('content').innerHTML = body ? body.innerHTML : doc.documentElement.innerHTML;
-  document.getElementById('content').style.fontSize = fontSize + 'rem';
-
-  // Detectar coberta: una sola imatge i quasi sense text
-  const contentEl = document.getElementById('content');
-  const imgCount  = contentEl.querySelectorAll('img').length;
-  const textLen   = contentEl.textContent.trim().length;
-  const isCover   = imgCount === 1 && textLen < 80;
-  document.getElementById('page-container').classList.toggle('is-cover', isCover);
-
-  // Marcar actiu al TOC
-  document.querySelectorAll('#toc-list a').forEach((a, i) => {
-    a.classList.toggle('active', i === index);
-  });
-
-  // Paginar després del render
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    setupPagination(pageTarget !== undefined ? pageTarget : 0);
-  }));
-}
-
-// ── PAGINACIÓ ──────────────────────────────────────────
-function setupPagination(targetPage) {
-  const area = document.getElementById('reader-area');
-  const pc   = document.getElementById('page-container');
-  const w = area.clientWidth;
-  const h = area.clientHeight;
-  pc.style.width  = w + 'px';
-  pc.style.height = h + 'px';
-
-  // Coberta: una sola pàgina, sense columnes
-  if (pc.classList.contains('is-cover')) {
-    pc.style.transform = 'translateX(0)';
-    totalPages = 1;
-    goToPage(0);
-    return;
-  }
-
-  pc.style.columnWidth = w + 'px';
-  void pc.scrollWidth;
-  totalPages = Math.max(1, Math.round(pc.scrollWidth / w));
-  goToPage(Math.min(targetPage, totalPages - 1));
-}
-
-function goToPage(n) {
-  n = Math.max(0, Math.min(n, totalPages - 1));
-  currentPage = n;
-  const area = document.getElementById('reader-area');
-  const pc   = document.getElementById('page-container');
-  pc.style.transform = 'translateX(-' + (n * area.clientWidth) + 'px)';
-  const isFirst = currentIndex === 0 && currentPage === 0;
-  const isLast  = currentIndex === spine.length - 1 && currentPage === totalPages - 1;
-  document.getElementById('btn-prev').disabled = isFirst;
-  document.getElementById('btn-next').disabled = isLast;
-  document.getElementById('chapter-info').innerHTML =
-    'Pàg. ' + (currentPage + 1) + ' / ' + totalPages +
-    '&nbsp;&nbsp;·&nbsp;&nbsp;Cap. ' + (currentIndex + 1) + ' / ' + spine.length;
-
-  // Guardar posició
-  if (bookKey) {
-    try { localStorage.setItem(bookKey, JSON.stringify({ chapter: currentIndex, page: currentPage })); }
-    catch(e) {}
-  }
-}
-
-window.addEventListener('resize', () => {
-  clearTimeout(resizeTimer);
-  resizeTimer = setTimeout(() => { if (spine.length) setupPagination(currentPage); }, 200);
-});
-
-function resolvePath(base, relative) {
-  const parts = base.split('/');
-  parts.pop();
-  relative.split('/').forEach(p => {
-    if (p === '..') parts.pop();
-    else if (p !== '.') parts.push(p);
-  });
-  return parts.join('/');
-}
-
-function nextPage() {
-  if (currentPage < totalPages - 1) {
-    goToPage(currentPage + 1);
-  } else if (currentIndex < spine.length - 1) {
-    goTo(currentIndex + 1, 0);
-  }
-}
-
-function prevPage() {
-  if (currentPage > 0) {
-    goToPage(currentPage - 1);
-  } else if (currentIndex > 0) {
-    goTo(currentIndex - 1, 99999);
-  }
-}
-
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  setTimeout(() => { if (spine.length) setupPagination(currentPage); }, 250);
-}
-
-function changeFont(dir) {
-  fontSize = Math.max(0.7, Math.min(2.0, fontSize + dir * 0.1));
-  document.getElementById('content').style.fontSize = fontSize + 'rem';
-  requestAnimationFrame(() => requestAnimationFrame(() => setupPagination(0)));
-}
-
-function toggleTheme() {
-  const isLight = document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent = isLight ? '☀' : '☀';
-}
-
-// Navegació per teclat
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeSearch();
-  if (document.getElementById('search-bar').classList.contains('open')) return;
-  if (e.key === 'ArrowRight' || e.key === 'PageDown') nextPage();
-  if (e.key === 'ArrowLeft'  || e.key === 'PageUp')   prevPage();
-});
-
-// Enter al cercador
-document.getElementById('search-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') doSearch();
-});
-
-// ── CERCA ──────────────────────────────────────────────
-let searchIndex = [];   // [{chapterIdx, text}]
-let searchResults = []; // [{chapterIdx, matchIdx}]
-let searchCursor = -1;
-let searchTerm = '';
-
-function toggleSearch() {
-  const bar = document.getElementById('search-bar');
-  bar.classList.toggle('open');
-  if (bar.classList.contains('open')) {
-    document.getElementById('search-input').focus();
-  } else {
-    clearHighlights();
-  }
-  setTimeout(() => { if (spine.length) setupPagination(currentPage); }, 50);
-}
-
-function closeSearch() {
-  document.getElementById('search-bar').classList.remove('open');
-  clearHighlights();
-  document.getElementById('search-info').textContent = '';
-  document.getElementById('search-input').value = '';
-  searchResults = [];
-  searchCursor = -1;
-  setTimeout(() => { if (spine.length) setupPagination(currentPage); }, 50);
-}
-
-async function buildSearchIndex() {
-  if (searchIndex.length === spine.length) return;
-  searchIndex = [];
-  for (let i = 0; i < spine.length; i++) {
-    const href = opfBase + spine[i];
+  player.addEventListener('loadedmetadata', () => {
+    checkNativeAudioTracks();
     try {
-      const text = await zip.file(href).async('string');
-      const doc = new DOMParser().parseFromString(text, 'application/xhtml+xml');
-      const body = doc.querySelector('body');
-      searchIndex.push({ chapterIdx: i, text: body ? body.textContent : '' });
-    } catch(e) {
-      searchIndex.push({ chapterIdx: i, text: '' });
-    }
-  }
-}
-
-async function doSearch() {
-  const term = document.getElementById('search-input').value.trim();
-  if (!term || !zip) return;
-  searchTerm = term;
-
-  document.getElementById('search-info').textContent = 'Cercant…';
-  await buildSearchIndex();
-
-  const regex = new RegExp(escapeRegex(term), 'gi');
-  searchResults = [];
-
-  searchIndex.forEach(({ chapterIdx, text }) => {
-    let m;
-    while ((m = regex.exec(text)) !== null) {
-      searchResults.push({ chapterIdx, pos: m.index });
-    }
-  });
-
-  if (searchResults.length === 0) {
-    document.getElementById('search-info').textContent = 'Cap resultat.';
-    document.getElementById('s-prev').disabled = true;
-    document.getElementById('s-next').disabled = true;
-    searchCursor = -1;
-    return;
-  }
-
-  searchCursor = 0;
-  updateSearchNav();
-  await jumpToResult(searchCursor);
-}
-
-function searchNav(dir) {
-  searchCursor = Math.max(0, Math.min(searchResults.length - 1, searchCursor + dir));
-  updateSearchNav();
-  jumpToResult(searchCursor);
-}
-
-function updateSearchNav() {
-  document.getElementById('search-info').textContent =
-    (searchCursor + 1) + ' de ' + searchResults.length + ' resultats';
-  document.getElementById('s-prev').disabled = searchCursor <= 0;
-  document.getElementById('s-next').disabled = searchCursor >= searchResults.length - 1;
-}
-
-async function jumpToResult(idx) {
-  const { chapterIdx } = searchResults[idx];
-
-  if (chapterIdx !== currentIndex) {
-    await goTo(chapterIdx, 0);
-  } else {
-    clearHighlights();
-  }
-
-  const sameChapter = searchResults.filter((r, i) => r.chapterIdx === chapterIdx && i <= idx);
-  highlightInContent(searchTerm, sameChapter.length - 1);
-
-  // Recalcular paginació des de zero i saltar a la pàgina del resultat
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const pc   = document.getElementById('page-container');
-    const area = document.getElementById('reader-area');
-    const w = area.clientWidth;
-    const h = area.clientHeight;
-
-    // Resetar transform per mesurar correctament
-    pc.style.transition = 'none';
-    pc.style.transform  = 'translateX(0)';
-    pc.style.width       = w + 'px';
-    pc.style.height      = h + 'px';
-    pc.style.columnWidth = w + 'px';
-    void pc.scrollWidth;
-    totalPages = Math.max(1, Math.round(pc.scrollWidth / w));
-
-    // Trobar a quina pàgina és el resultat
-    let targetPage = 0;
-    const current = document.querySelector('mark.current');
-    if (current) {
-      const markLeft = current.getBoundingClientRect().left - pc.getBoundingClientRect().left;
-      targetPage = Math.max(0, Math.min(Math.floor(markLeft / w), totalPages - 1));
-    }
-
-    // Aplicar la pàgina amb transició
-    pc.style.transition = 'transform 0.2s ease';
-    currentPage = targetPage;
-    pc.style.transform = 'translateX(-' + (targetPage * w) + 'px)';
-
-    const isFirst = currentIndex === 0 && currentPage === 0;
-    const isLast  = currentIndex === spine.length - 1 && currentPage === totalPages - 1;
-    document.getElementById('btn-prev').disabled = isFirst;
-    document.getElementById('btn-next').disabled = isLast;
-    document.getElementById('chapter-info').innerHTML =
-      'Pàg. ' + (currentPage + 1) + ' / ' + totalPages +
-      '&nbsp;&nbsp;·&nbsp;&nbsp;Cap. ' + (currentIndex + 1) + ' / ' + spine.length;
-  }));
-}
-
-function highlightInContent(term, currentOcc) {
-  const content = document.getElementById('content');
-  const regex = new RegExp('(' + escapeRegex(term) + ')', 'gi');
-  let count = 0;
-  walkTextNodes(content, node => {
-    const parts = node.nodeValue.split(regex);
-    if (parts.length <= 1) return;
-    const frag = document.createDocumentFragment();
-    parts.forEach(part => {
-      if (regex.test(part)) {
-        const mark = document.createElement('mark');
-        mark.className = 'search-hit' + (count === currentOcc ? ' current' : '');
-        mark.textContent = part;
-        frag.appendChild(mark);
-        count++;
-        regex.lastIndex = 0;
-      } else {
-        frag.appendChild(document.createTextNode(part));
+      const saved = localStorage.getItem(currentFileKey);
+      if (saved) {
+        const { time } = JSON.parse(saved);
+        if (time && time > 10) {
+          document.getElementById('resume-msg').textContent =
+            'Vas deixar aquest vídeo a ' + formatTime(time) + '. Vols continuar?';
+          document.getElementById('resume-dialog').style.display = 'block';
+          player._savedTime = time;
+          return;
+        }
       }
-    });
-    node.parentNode.replaceChild(frag, node);
-  });
-  // sense scrollIntoView — la paginació per columnes no usa scroll
-}
-
-function clearHighlights() {
-  document.querySelectorAll('mark.search-hit').forEach(mark => {
-    const parent = mark.parentNode;
-    parent.replaceChild(document.createTextNode(mark.textContent), mark);
-    parent.normalize();
-  });
-}
-
-function walkTextNodes(node, fn) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    fn(node);
-  } else {
-    // Clonar llista per evitar mutació durant iteració
-    Array.from(node.childNodes).forEach(child => walkTextNodes(child, fn));
-  }
-}
-
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-// ── PANTALLA COMPLETA ──────────────────────────────────
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
-  } else {
-    document.exitFullscreen();
-  }
-}
-document.addEventListener('fullscreenchange', () => {
-  document.getElementById('fs-btn').textContent =
-    document.fullscreenElement ? '✕ Surt pantalla completa' : '⛶ Pantalla completa';
-  setTimeout(() => { if (spine.length) setupPagination(currentPage); }, 100);
-});
-document.addEventListener('keydown', e => {
-  if (e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+    } catch(e) {}
+  }, { once: true });
 });
 
-// ── TEXT TO SPEECH ─────────────────────────────────────
-let ttsActive    = false;
-let ttsWords     = [];      // llista de paraules de la pàgina actual
-let ttsWordIndex = 0;       // paraula actual
-let ttsUtter     = null;
-let ttsPageText  = '';
-
-function toggleTTS() {
-  if (ttsActive) {
-    stopTTS();
-  } else {
-    startTTS();
-  }
-}
-
-function startTTS() {
-  if (!window.speechSynthesis) {
-    alert('El teu navegador no suporta la lectura en veu alta.');
-    return;
-  }
-  ttsActive = true;
-  document.getElementById('tts-btn').textContent = '■ Aturar';
-  document.getElementById('tts-btn').classList.add('active');
-  speakCurrentPage();
-}
-
-function stopTTS() {
-  ttsActive = false;
-  window.speechSynthesis.cancel();
-  clearTTSHighlight();
-  document.getElementById('tts-btn').textContent = '▶ Llegir';
-  document.getElementById('tts-btn').classList.remove('active');
-  ttsUtter = null;
-}
-
-function getVoice() {
-  const voices = window.speechSynthesis.getVoices();
-  // Buscar veu 2 de es-ES (índex 1)
-  const esVoices = voices.filter(v => v.lang === 'es-ES' || v.lang.startsWith('es'));
-  return esVoices[1] || esVoices[0] || voices.find(v => v.lang.startsWith('es')) || null;
-}
-
-function speakCurrentPage() {
-  if (!ttsActive) return;
-
-  // Obtenir el text de la pàgina actual
-  const content = document.getElementById('content');
-  const area    = document.getElementById('reader-area');
-  const pc      = document.getElementById('page-container');
-  const w       = area.clientWidth;
-
-  // Etiquetar cada paraula amb un span per ressaltar
-  wrapWordsInSpans(content);
-
-  // Recollir les paraules de la pàgina visible
-  const allSpans = Array.from(content.querySelectorAll('span.tts-span'));
-  const pageSpans = allSpans.filter(span => {
-    const rect = span.getBoundingClientRect();
-    const pcRect = pc.getBoundingClientRect();
-    const relLeft = rect.left - pcRect.left + (currentPage * w);
-    return relLeft >= currentPage * w && relLeft < (currentPage + 1) * w;
-  });
-
-  if (!pageSpans.length) {
-    // Pàgina sense text, passar a la següent
-    nextPageTTS();
-    return;
-  }
-
-  ttsWords = pageSpans;
-  ttsWordIndex = 0;
-  ttsPageText = pageSpans.map(s => s.textContent).join(' ');
-
-  ttsUtter = new SpeechSynthesisUtterance(ttsPageText);
-  ttsUtter.lang  = 'es-ES';
-  ttsUtter.rate  = 0.95;
-  ttsUtter.pitch = 1;
-
-  // Assignar veu
-  const voice = getVoice();
-  if (voice) ttsUtter.voice = voice;
-
-  // Ressaltar paraula per paraula
-  ttsUtter.addEventListener('boundary', e => {
-    if (e.name !== 'word') return;
-    clearTTSHighlight();
-    // Trobar quina paraula correspon per posició al text
-    let charCount = 0;
-    for (let i = 0; i < ttsWords.length; i++) {
-      charCount += ttsWords[i].textContent.length + 1;
-      if (charCount > e.charIndex) {
-        ttsWords[i].classList.add('tts-word');
-        ttsWordIndex = i;
-        break;
-      }
+function checkNativeAudioTracks() {
+  if (player.audioTracks && player.audioTracks.length > 1) {
+    audioSel.style.display = '';
+    audioSel.innerHTML = '';
+    for (let i = 0; i < player.audioTracks.length; i++) {
+      const opt = document.createElement('option');
+      opt.value = i;
+      opt.textContent = player.audioTracks[i].label || ('Àudio ' + (i+1));
+      audioSel.appendChild(opt);
     }
-  });
+  }
+}
 
-  ttsUtter.onend = () => {
-    if (!ttsActive) return;
-    clearTTSHighlight();
-    nextPageTTS();
+document.getElementById('audio2-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  if (altAudioEl) { altAudioEl.pause(); altAudioEl.src = ''; }
+  altAudioEl = new Audio(URL.createObjectURL(file));
+  altAudioEl.preload = 'auto';
+  audioSel.style.display = '';
+  audioSel.innerHTML = '<option value="main">Àudio original</option><option value="alt">Àudio 2</option>';
+});
+
+function switchAudio() {
+  const val = audioSel.value;
+  const t = player.currentTime;
+  const playing = !player.paused;
+
+  if (val === 'alt' && altAudioEl) {
+    player.muted = true;
+    altAudioEl.currentTime = t;
+    if (playing) altAudioEl.play();
+    usingAltAudio = true;
+  } else if (typeof val === 'string' && !isNaN(parseInt(val)) && player.audioTracks) {
+    for (let i = 0; i < player.audioTracks.length; i++) {
+      player.audioTracks[i].enabled = (i === parseInt(val));
+    }
+    usingAltAudio = false;
+    player.muted = false;
+  } else {
+    player.muted = false;
+    if (altAudioEl) altAudioEl.pause();
+    usingAltAudio = false;
+  }
+}
+
+player.addEventListener('play', () => { if (usingAltAudio && altAudioEl) altAudioEl.play(); });
+player.addEventListener('pause', () => { if (usingAltAudio && altAudioEl) altAudioEl.pause(); });
+player.addEventListener('seeked', () => { if (usingAltAudio && altAudioEl) altAudioEl.currentTime = player.currentTime; });
+
+document.getElementById('srt-input').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    subtitles = parseSRT(ev.target.result);
+    subsActive = true;
+    subBtn.disabled = false;
+    subBtn.textContent = 'Subtítols: ON';
   };
+  reader.readAsText(file, 'UTF-8');
+});
 
-  ttsUtter.onerror = () => stopTTS();
-
-  // Esperar que les veus estiguin carregades
-  if (window.speechSynthesis.getVoices().length === 0) {
-    window.speechSynthesis.onvoiceschanged = () => {
-      window.speechSynthesis.speak(ttsUtter);
-    };
-  } else {
-    window.speechSynthesis.speak(ttsUtter);
+function parseSRT(text) {
+  const blocks = text.trim().split(/\n\s*\n/);
+  const result = [];
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 2) continue;
+    let timeIdx = -1;
+    for (let i = 0; i < lines.length; i++) { if (lines[i].includes('-->')) { timeIdx = i; break; } }
+    if (timeIdx === -1) continue;
+    const times = lines[timeIdx].split('-->');
+    if (times.length < 2) continue;
+    const start = srtTimeToSec(times[0].trim());
+    const end   = srtTimeToSec(times[1].trim());
+    const text2 = lines.slice(timeIdx + 1).join('\n').trim();
+    if (text2) result.push({ start, end, text: text2 });
   }
+  return result;
 }
 
-function nextPageTTS() {
-  clearTTSHighlight();
-  removeWordSpans();
-  setTimeout(() => {
-    if (currentPage < totalPages - 1) {
-      goToPage(currentPage + 1);
-      setTimeout(speakCurrentPage, 400);
-    } else if (currentIndex < spine.length - 1) {
-      goTo(currentIndex + 1, 0).then ? goTo(currentIndex + 1, 0) : goTo(currentIndex + 1, 0);
-      setTimeout(speakCurrentPage, 700);
-    } else {
-      stopTTS();
-    }
-  }, 300);
+function srtTimeToSec(t) {
+  const clean = t.replace(',', '.');
+  const parts = clean.split(':');
+  if (parts.length === 3) return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
+  return 0;
 }
 
-function clearTTSHighlight() {
-  document.querySelectorAll('span.tts-word').forEach(s => s.classList.remove('tts-word'));
+function toggleSubs() {
+  subsActive = !subsActive;
+  subBtn.textContent = 'Subtítols: ' + (subsActive ? 'ON' : 'OFF');
+  if (!subsActive) { subDisplay.style.display = 'none'; subDisplay.textContent = ''; }
 }
 
-function wrapWordsInSpans(container) {
-  // Si ja estan embolcallades, no fer res
-  if (container.querySelector('span.tts-span')) return;
-  walkTextNodesTTS(container, node => {
-    const text = node.nodeValue;
-    if (!text.trim()) return;
-    const frag = document.createDocumentFragment();
-    const parts = text.split(/(\s+)/);
-    parts.forEach(part => {
-      if (/\S/.test(part)) {
-        const span = document.createElement('span');
-        span.className = 'tts-span';
-        span.textContent = part;
-        frag.appendChild(span);
-      } else {
-        frag.appendChild(document.createTextNode(part));
-      }
-    });
-    node.parentNode.replaceChild(frag, node);
+const HISTORY_KEY = 'video_history';
+const MAX_HISTORY = 10;
+
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) { return []; } }
+
+function saveToHistory(name, time, duration) {
+  try {
+    let history = loadHistory().filter(h => h.name !== name);
+    history.unshift({ name, time, duration, date: Date.now() });
+    if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    renderHistory();
+  } catch(e) {}
+}
+
+function deleteFromHistory(name) {
+  try {
+    let history = loadHistory().filter(h => h.name !== name);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    const key = 'video_pos_' + name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
+    localStorage.removeItem(key);
+    renderHistory();
+  } catch(e) {}
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  const empty = document.getElementById('sidebar-empty');
+  const history = loadHistory();
+  list.innerHTML = '';
+  if (!history.length) { empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
+  history.forEach(h => {
+    const li = document.createElement('li');
+    const pct = h.duration ? Math.round((h.time / h.duration) * 100) : 0;
+    li.innerHTML = `
+      <button class="h-del" onclick="deleteFromHistory('${h.name.replace(/'/g, "\\'")}')">✕</button>
+      <div class="h-name" title="${h.name}">${h.name}</div>
+      <div class="h-time">${formatTime(h.time)}${h.duration ? ' · ' + pct + '%' : ''}</div>
+    `;
+    list.appendChild(li);
   });
 }
 
-function removeWordSpans() {
-  document.querySelectorAll('span.tts-span').forEach(span => {
-    const parent = span.parentNode;
-    parent.replaceChild(document.createTextNode(span.textContent), span);
-    parent.normalize();
-  });
-}
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
+renderHistory();
 
-function walkTextNodesTTS(node, fn) {
-  if (node.nodeType === Node.TEXT_NODE) {
-    fn(node);
-  } else if (!['SCRIPT','STYLE','MARK'].includes(node.tagName)) {
-    Array.from(node.childNodes).forEach(child => walkTextNodesTTS(child, fn));
+function resumeVideo() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = player._savedTime || 0; player.play(); playBtn.textContent = '⏸ Pausa'; }
+function startOver() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = 0; try { localStorage.removeItem(currentFileKey); } catch(e) {} player.play(); playBtn.textContent = '⏸ Pausa'; }
+
+function togglePlay() { if (player.paused) { player.play(); playBtn.textContent = '⏸ Pausa'; } else { player.pause(); playBtn.textContent = '▶ Play'; } }
+function skip(sec) { player.currentTime = Math.max(0, Math.min(player.duration || 0, player.currentTime + sec)); }
+function seek(e) { if (!player.duration) return; const rect = e.currentTarget.getBoundingClientRect(); const ratio = (e.clientX - rect.left) / rect.width; player.currentTime = ratio * player.duration; }
+function setVolume(v) { player.volume = v; if (altAudioEl) altAudioEl.volume = v; }
+
+player.addEventListener('ended', () => { playBtn.textContent = '▶ Play'; if (usingAltAudio && altAudioEl) altAudioEl.pause(); try { if (currentFileKey) localStorage.removeItem(currentFileKey); } catch(e) {} });
+
+player.addEventListener('timeupdate', () => {
+  if (!player.duration) return;
+  progressBar.style.width = (player.currentTime / player.duration) * 100 + '%';
+  timeDisp.textContent = formatTime(player.currentTime) + ' / ' + formatTime(player.duration);
+
+  if (currentFileKey && player.currentTime > 10) {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      try { localStorage.setItem(currentFileKey, JSON.stringify({ time: player.currentTime })); saveToHistory(document.getElementById('file-title').textContent, player.currentTime, player.duration); } catch(e) {}
+    }, 5000);
   }
+
+  if (subsActive && subtitles.length) {
+    const t = player.currentTime;
+    const sub = subtitles.find(s => t >= s.start && t <= s.end);
+    if (sub && sub.text !== currentSubs) { currentSubs = sub.text; subDisplay.innerHTML = sub.text.replace(/\n/g, '<br>'); subDisplay.style.display = 'flex'; }
+    else if (!sub) { currentSubs = ''; subDisplay.style.display = 'none'; }
+  }
+});
+
+function formatTime(sec) { if (!sec || isNaN(sec)) return '0:00'; const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); const s = Math.floor(sec % 60); return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s); }
+function pad(n) { return n < 10 ? '0' + n : n; }
+
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+  if (e.key === ' ' || e.key === 'k') { e.preventDefault(); togglePlay(); }
+  if (e.key === 'ArrowRight') skip(10);
+  if (e.key === 'ArrowLeft')  skip(-10);
+  if (e.key === 'ArrowUp')    { player.volume = Math.min(1, player.volume + 0.1); document.getElementById('volume').value = player.volume; }
+  if (e.key === 'ArrowDown')  { player.volume = Math.max(0, player.volume - 0.1); document.getElementById('volume').value = player.volume; }
+  if (e.key === 'f' || e.key === 'F11') { e.preventDefault(); toggleFullscreen(); }
+  if (e.key === 's') toggleSubs();
+  if (e.key === 'Escape') { if (document.fullscreenElement) document.exitFullscreen(); }
+});
+
+function toggleFullscreen() { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); } else { document.exitFullscreen(); } }
+document.addEventListener('fullscreenchange', () => { document.getElementById('fs-btn').textContent = document.fullscreenElement ? '✕ Surt' : '⛶ Pantalla completa'; });
+
+function toggleTheme() { document.body.classList.toggle('light'); }
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+
+videoArea.addEventListener('mousemove', showControls);
+videoArea.addEventListener('mousedown', showControls);
+
+function showControls() {
+  videoArea.classList.remove('hide-cursor');
+  videoArea.classList.remove('hide-controls');
+  clearTimeout(mouseMoveTimeout);
+  mouseMoveTimeout = setTimeout(hideControls, hideDelay);
 }
 
-// Aturar TTS si es canvia de pàgina manualment
-const _origNextPage = nextPage;
-const _origPrevPage = prevPage;
-nextPage = function() { if (ttsActive) stopTTS(); _origNextPage(); };
-prevPage = function() { if (ttsActive) stopTTS(); _origPrevPage(); };
+function hideControls() { if (!player.paused) { videoArea.classList.add('hide-cursor'); videoArea.classList.add('hide-controls'); } }
+player.addEventListener('pause', showControls);
+player.addEventListener('play', showControls);
 </script>
 </body>
 </html>
