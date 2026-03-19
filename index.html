@@ -151,6 +151,11 @@
     min-height: 0;
   }
 
+  /* Amagar cursor */
+  #video-area.hide-cursor {
+    cursor: none;
+  }
+
   #player {
     max-width: 100%;
     max-height: 100%;
@@ -179,6 +184,13 @@
     flex-direction: column;
     gap: 6px;
     flex-shrink: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  /* Amagar controls */
+  #video-area.hide-controls + #controls {
+    opacity: 0;
+    pointer-events: none;
   }
 
   #progress-wrap {
@@ -219,6 +231,7 @@
   }
   #controls-row button:hover { color: #eee; border-color: #888; }
   #controls-row button:disabled { opacity: 0.3; cursor: default; }
+  #play-btn { min-width: 90px; justify-content: center; }  
 
   #time-display {
     font-family: sans-serif;
@@ -307,14 +320,15 @@
   #resume-btns button:hover { color: #eee; border-color: #888; }
   #resume-btns button:first-child:hover { color: #e8c97e; border-color: #e8c97e; }
 
-  /* ── SUBTÍTOLS ── */
+  /* ── SUBTÍTOLS SEMITRANSPARENTS ── */
   #subtitle-display {
     position: absolute;
     bottom: 12px;
     left: 50%;
     transform: translateX(-50%);
-    background: rgba(0,0,0,0.75);
+    background: rgba(0,0,0,0.25);
     color: #fff;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
     font-size: 1.1rem;
     font-family: sans-serif;
     padding: 4px 14px;
@@ -322,8 +336,17 @@
     text-align: center;
     max-width: 90%;
     line-height: 1.5;
-    pointer-events: none;
+    min-height: calc(1.1rem * 1.5 * 2 + 8px);
     display: none;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 5;
+    transition: bottom 0.3s ease;
+  }
+
+  #video-area.hide-controls #subtitle-display {
+    bottom: 24px;
   }
 
   /* ── TEMA CLAR ── */
@@ -386,8 +409,8 @@
       <button onclick="startOver()">Des del principi</button>
     </div>
   </div>
-  </div><!-- fi video-area -->
-</div><!-- fi main -->
+  </div>
+</div>
 
 <div id="controls">
   <div id="progress-wrap" onclick="seek(event)">
@@ -421,17 +444,19 @@ const timeDisp   = document.getElementById('time-display');
 const subDisplay = document.getElementById('subtitle-display');
 const subBtn     = document.getElementById('sub-btn');
 const audioSel   = document.getElementById('audio-select');
+const videoArea  = document.getElementById('video-area');
 
 let subtitles    = [];
 let subsActive   = false;
-let altAudio     = null;
 let altAudioEl   = null;
 let usingAltAudio= false;
 let currentSubs  = '';
 let currentFileKey = '';
 let saveTimer    = null;
 
-// ── CÀRREGA DE VÍDEO ──────────────────────────────────
+let mouseMoveTimeout;
+const hideDelay = 2000;
+
 document.getElementById('video-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -443,11 +468,8 @@ document.getElementById('video-input').addEventListener('change', e => {
   document.getElementById('file-title').textContent = file.name;
   document.getElementById('welcome-msg').style.display = 'none';
   playBtn.disabled = false;
-
-  // Clau per al marcador
   currentFileKey = 'video_pos_' + file.name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
 
-  // Comprovar si hi ha posició guardada
   player.addEventListener('loadedmetadata', () => {
     checkNativeAudioTracks();
     try {
@@ -463,12 +485,10 @@ document.getElementById('video-input').addEventListener('change', e => {
         }
       }
     } catch(e) {}
-    // No autoplay: esperem que l'usuari premi Play
   }, { once: true });
 });
 
 function checkNativeAudioTracks() {
-  // AudioTrackList (suportat en alguns navegadors)
   if (player.audioTracks && player.audioTracks.length > 1) {
     audioSel.style.display = '';
     audioSel.innerHTML = '';
@@ -481,20 +501,12 @@ function checkNativeAudioTracks() {
   }
 }
 
-// ── CÀRREGA D'ÀUDIO ALTERNATIU ────────────────────────
 document.getElementById('audio2-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
-
-  if (altAudioEl) {
-    altAudioEl.pause();
-    altAudioEl.src = '';
-  }
-
+  if (altAudioEl) { altAudioEl.pause(); altAudioEl.src = ''; }
   altAudioEl = new Audio(URL.createObjectURL(file));
   altAudioEl.preload = 'auto';
-
-  // Mostrar selector
   audioSel.style.display = '';
   audioSel.innerHTML = '<option value="main">Àudio original</option><option value="alt">Àudio 2</option>';
 });
@@ -510,7 +522,6 @@ function switchAudio() {
     if (playing) altAudioEl.play();
     usingAltAudio = true;
   } else if (typeof val === 'string' && !isNaN(parseInt(val)) && player.audioTracks) {
-    // Pistes natives
     for (let i = 0; i < player.audioTracks.length; i++) {
       player.audioTracks[i].enabled = (i === parseInt(val));
     }
@@ -518,23 +529,15 @@ function switchAudio() {
     player.muted = false;
   } else {
     player.muted = false;
-    if (altAudioEl) { altAudioEl.pause(); }
+    if (altAudioEl) altAudioEl.pause();
     usingAltAudio = false;
   }
 }
 
-// Sincronitzar àudio alternatiu amb el vídeo
-player.addEventListener('play', () => {
-  if (usingAltAudio && altAudioEl) altAudioEl.play();
-});
-player.addEventListener('pause', () => {
-  if (usingAltAudio && altAudioEl) altAudioEl.pause();
-});
-player.addEventListener('seeked', () => {
-  if (usingAltAudio && altAudioEl) altAudioEl.currentTime = player.currentTime;
-});
+player.addEventListener('play', () => { if (usingAltAudio && altAudioEl) altAudioEl.play(); });
+player.addEventListener('pause', () => { if (usingAltAudio && altAudioEl) altAudioEl.pause(); });
+player.addEventListener('seeked', () => { if (usingAltAudio && altAudioEl) altAudioEl.currentTime = player.currentTime; });
 
-// ── CÀRREGA DE SUBTÍTOLS SRT ──────────────────────────
 document.getElementById('srt-input').addEventListener('change', e => {
   const file = e.target.files[0];
   if (!file) return;
@@ -554,11 +557,8 @@ function parseSRT(text) {
   for (const block of blocks) {
     const lines = block.trim().split('\n');
     if (lines.length < 2) continue;
-    // Trobar la línia de temps (pot no ser la primera)
     let timeIdx = -1;
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].includes('-->')) { timeIdx = i; break; }
-    }
+    for (let i = 0; i < lines.length; i++) { if (lines[i].includes('-->')) { timeIdx = i; break; } }
     if (timeIdx === -1) continue;
     const times = lines[timeIdx].split('-->');
     if (times.length < 2) continue;
@@ -571,41 +571,27 @@ function parseSRT(text) {
 }
 
 function srtTimeToSec(t) {
-  // Format: HH:MM:SS,mmm o HH:MM:SS.mmm
   const clean = t.replace(',', '.');
   const parts = clean.split(':');
-  if (parts.length === 3) {
-    return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
-  }
+  if (parts.length === 3) return parseFloat(parts[0]) * 3600 + parseFloat(parts[1]) * 60 + parseFloat(parts[2]);
   return 0;
 }
 
 function toggleSubs() {
   subsActive = !subsActive;
   subBtn.textContent = 'Subtítols: ' + (subsActive ? 'ON' : 'OFF');
-  if (!subsActive) {
-    subDisplay.style.display = 'none';
-    subDisplay.textContent = '';
-  }
+  if (!subsActive) { subDisplay.style.display = 'none'; subDisplay.textContent = ''; }
 }
 
-// ── HISTORIAL ─────────────────────────────────────────
 const HISTORY_KEY = 'video_history';
 const MAX_HISTORY = 10;
 
-function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; }
-  catch(e) { return []; }
-}
+function loadHistory() { try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) { return []; } }
 
 function saveToHistory(name, time, duration) {
   try {
-    let history = loadHistory();
-    // Treure entrada existent amb el mateix nom
-    history = history.filter(h => h.name !== name);
-    // Afegir al principi
+    let history = loadHistory().filter(h => h.name !== name);
     history.unshift({ name, time, duration, date: Date.now() });
-    // Limitar a 10
     if (history.length > MAX_HISTORY) history = history.slice(0, MAX_HISTORY);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
     renderHistory();
@@ -616,7 +602,6 @@ function deleteFromHistory(name) {
   try {
     let history = loadHistory().filter(h => h.name !== name);
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
-    // Esborrar també el marcador de posició
     const key = 'video_pos_' + name.replace(/[^a-zA-Z0-9]/g, '_').substring(0, 50);
     localStorage.removeItem(key);
     renderHistory();
@@ -628,10 +613,7 @@ function renderHistory() {
   const empty = document.getElementById('sidebar-empty');
   const history = loadHistory();
   list.innerHTML = '';
-  if (!history.length) {
-    empty.style.display = 'block';
-    return;
-  }
+  if (!history.length) { empty.style.display = 'block'; return; }
   empty.style.display = 'none';
   history.forEach(h => {
     const li = document.createElement('li');
@@ -645,112 +627,42 @@ function renderHistory() {
   });
 }
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-}
-
-// Carregar historial en iniciar
+function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 renderHistory();
 
-// ── REPRESA ───────────────────────────────────────────
-function resumeVideo() {
-  document.getElementById('resume-dialog').style.display = 'none';
-  player.currentTime = player._savedTime || 0;
-  player.play();
-  playBtn.textContent = '⏸ Pausa';
-}
+function resumeVideo() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = player._savedTime || 0; player.play(); playBtn.textContent = '⏸ Pausa'; }
+function startOver() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = 0; try { localStorage.removeItem(currentFileKey); } catch(e) {} player.play(); playBtn.textContent = '⏸ Pausa'; }
 
-function startOver() {
-  document.getElementById('resume-dialog').style.display = 'none';
-  player.currentTime = 0;
-  try { localStorage.removeItem(currentFileKey); } catch(e) {}
-  player.play();
-  playBtn.textContent = '⏸ Pausa';
-}
+function togglePlay() { if (player.paused) { player.play(); playBtn.textContent = '⏸ Pausa'; } else { player.pause(); playBtn.textContent = '▶ Play'; } }
+function skip(sec) { player.currentTime = Math.max(0, Math.min(player.duration || 0, player.currentTime + sec)); }
+function seek(e) { if (!player.duration) return; const rect = e.currentTarget.getBoundingClientRect(); const ratio = (e.clientX - rect.left) / rect.width; player.currentTime = ratio * player.duration; }
+function setVolume(v) { player.volume = v; if (altAudioEl) altAudioEl.volume = v; }
 
-// ── REPRODUCCIÓ ───────────────────────────────────────
-function togglePlay() {
-  if (player.paused) {
-    player.play();
-    playBtn.textContent = '⏸ Pausa';
-  } else {
-    player.pause();
-    playBtn.textContent = '▶ Play';
-  }
-}
+player.addEventListener('ended', () => { playBtn.textContent = '▶ Play'; if (usingAltAudio && altAudioEl) altAudioEl.pause(); try { if (currentFileKey) localStorage.removeItem(currentFileKey); } catch(e) {} });
 
-function skip(sec) {
-  player.currentTime = Math.max(0, Math.min(player.duration || 0, player.currentTime + sec));
-}
-
-function seek(e) {
-  if (!player.duration) return;
-  const rect = e.currentTarget.getBoundingClientRect();
-  const ratio = (e.clientX - rect.left) / rect.width;
-  player.currentTime = ratio * player.duration;
-}
-
-function setVolume(v) {
-  player.volume = v;
-  if (altAudioEl) altAudioEl.volume = v;
-}
-
-player.addEventListener('ended', () => {
-  playBtn.textContent = '▶ Play';
-  if (usingAltAudio && altAudioEl) altAudioEl.pause();
-  // Esborrar marcador quan acaba
-  try { if (currentFileKey) localStorage.removeItem(currentFileKey); } catch(e) {}
-});
-
-// ── PROGRÉS I SUBTÍTOLS ───────────────────────────────
 player.addEventListener('timeupdate', () => {
   if (!player.duration) return;
-
-  // Barra de progrés
-  const pct = (player.currentTime / player.duration) * 100;
-  progressBar.style.width = pct + '%';
-
-  // Temps
+  progressBar.style.width = (player.currentTime / player.duration) * 100 + '%';
   timeDisp.textContent = formatTime(player.currentTime) + ' / ' + formatTime(player.duration);
 
-  // Guardar posició cada 5 segons
   if (currentFileKey && player.currentTime > 10) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-      try {
-        localStorage.setItem(currentFileKey, JSON.stringify({ time: player.currentTime }));
-        saveToHistory(document.getElementById('file-title').textContent, player.currentTime, player.duration);
-      } catch(e) {}
+      try { localStorage.setItem(currentFileKey, JSON.stringify({ time: player.currentTime })); saveToHistory(document.getElementById('file-title').textContent, player.currentTime, player.duration); } catch(e) {}
     }, 5000);
   }
 
-  // Subtítols
   if (subsActive && subtitles.length) {
     const t = player.currentTime;
     const sub = subtitles.find(s => t >= s.start && t <= s.end);
-    if (sub && sub.text !== currentSubs) {
-      currentSubs = sub.text;
-      subDisplay.innerHTML = sub.text.replace(/\n/g, '<br>');
-      subDisplay.style.display = 'block';
-    } else if (!sub) {
-      currentSubs = '';
-      subDisplay.style.display = 'none';
-    }
+    if (sub && sub.text !== currentSubs) { currentSubs = sub.text; subDisplay.innerHTML = sub.text.replace(/\n/g, '<br>'); subDisplay.style.display = 'flex'; }
+    else if (!sub) { currentSubs = ''; subDisplay.style.display = 'none'; }
   }
 });
 
-function formatTime(sec) {
-  if (!sec || isNaN(sec)) return '0:00';
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  const s = Math.floor(sec % 60);
-  if (h > 0) return h + ':' + pad(m) + ':' + pad(s);
-  return m + ':' + pad(s);
-}
-
+function formatTime(sec) { if (!sec || isNaN(sec)) return '0:00'; const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); const s = Math.floor(sec % 60); return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s); }
 function pad(n) { return n < 10 ? '0' + n : n; }
 
-// ── TECLAT ────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
   if (e.key === ' ' || e.key === 'k') { e.preventDefault(); togglePlay(); }
@@ -763,28 +675,25 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { if (document.fullscreenElement) document.exitFullscreen(); }
 });
 
-// ── PANTALLA COMPLETA ─────────────────────────────────
-function toggleFullscreen() {
-  if (!document.fullscreenElement) {
-    document.documentElement.requestFullscreen().catch(() => {});
-  } else {
-    document.exitFullscreen();
-  }
-}
-document.addEventListener('fullscreenchange', () => {
-  document.getElementById('fs-btn').textContent =
-    document.fullscreenElement ? '✕ Surt' : '⛶ Pantalla completa';
-});
+function toggleFullscreen() { if (!document.fullscreenElement) { document.documentElement.requestFullscreen().catch(() => {}); } else { document.exitFullscreen(); } }
+document.addEventListener('fullscreenchange', () => { document.getElementById('fs-btn').textContent = document.fullscreenElement ? '✕ Surt' : '⛶ Pantalla completa'; });
 
-// ── TEMA ──────────────────────────────────────────────
-function toggleTheme() {
-  const l = document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent = l ? '☀' : '☀';
+function toggleTheme() { document.body.classList.toggle('light'); }
+if ('serviceWorker' in navigator) { navigator.serviceWorker.register('sw.js').catch(() => {}); }
+
+videoArea.addEventListener('mousemove', showControls);
+videoArea.addEventListener('mousedown', showControls);
+
+function showControls() {
+  videoArea.classList.remove('hide-cursor');
+  videoArea.classList.remove('hide-controls');
+  clearTimeout(mouseMoveTimeout);
+  mouseMoveTimeout = setTimeout(hideControls, hideDelay);
 }
-// ── SERVICE WORKER ────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
-}
+
+function hideControls() { if (!player.paused) { videoArea.classList.add('hide-cursor'); videoArea.classList.add('hide-controls'); } }
+player.addEventListener('pause', showControls);
+player.addEventListener('play', showControls);
 </script>
 </body>
 </html>
