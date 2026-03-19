@@ -360,7 +360,7 @@
 
   <span id="file-title">Cap fitxer carregat</span>
 
-  <button id="theme-btn" onclick="toggleTheme()">☀ Clar</button>
+  <button id="theme-btn" onclick="toggleTheme()">☀</button>
   <button id="fs-btn" onclick="toggleFullscreen()">⛶ Pantalla completa</button>
 </div>
 
@@ -779,7 +779,7 @@ document.addEventListener('fullscreenchange', () => {
 // ── TEMA ──────────────────────────────────────────────
 function toggleTheme() {
   const l = document.body.classList.toggle('light');
-  document.getElementById('theme-btn').textContent = l ? '☀ Fosc' : '☀ Clar';
+  document.getElementById('theme-btn').textContent = l ? '☀' : '☀';
 }
 // ── SERVICE WORKER ────────────────────────────────────
 if ('serviceWorker' in navigator) {
