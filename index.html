@@ -630,10 +630,10 @@ function renderHistory() {
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('open'); }
 renderHistory();
 
-function resumeVideo() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = player._savedTime || 0; player.play(); playBtn.textContent = '⏸ Pausa'; }
-function startOver() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = 0; try { localStorage.removeItem(currentFileKey); } catch(e) {} player.play(); playBtn.textContent = '⏸ Pausa'; }
+function resumeVideo() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = player._savedTime || 0; player.play(); playBtn.textContent = 'Pausa'; }
+function startOver() { document.getElementById('resume-dialog').style.display = 'none'; player.currentTime = 0; try { localStorage.removeItem(currentFileKey); } catch(e) {} player.play(); playBtn.textContent = 'Pausa'; }
 
-function togglePlay() { if (player.paused) { player.play(); playBtn.textContent = '⏸ Pausa'; } else { player.pause(); playBtn.textContent = '▶ Play'; } }
+function togglePlay() { if (player.paused) { player.play(); playBtn.textContent = 'Pausa'; } else { player.pause(); playBtn.textContent = '▶ Play'; } }
 function skip(sec) { player.currentTime = Math.max(0, Math.min(player.duration || 0, player.currentTime + sec)); }
 function seek(e) { if (!player.duration) return; const rect = e.currentTarget.getBoundingClientRect(); const ratio = (e.clientX - rect.left) / rect.width; player.currentTime = ratio * player.duration; }
 function setVolume(v) { player.volume = v; if (altAudioEl) altAudioEl.volume = v; }
